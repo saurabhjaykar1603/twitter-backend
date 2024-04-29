@@ -86,10 +86,13 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-const logoutUser = async (req, res) => {
-  res.json({
-    data: "You Hit logout endpoint",
-  });
-};
+const logoutUser = asyncHandler(async (req, res) => {
+  // Remove token from cookie
+  res.cookie("token", "", { maxAge: 0 });
+  // Send response
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Logout successfully"));
+});
 
 export { signupUser, loginUser, logoutUser };
