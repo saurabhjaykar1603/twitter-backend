@@ -95,4 +95,13 @@ const logoutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, null, "Logout successfully"));
 });
 
-export { signupUser, loginUser, logoutUser };
+const getMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select("-password");
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+  // Send response
+  return res.json(new ApiResponse(200, user, "User found"));
+});
+
+export { signupUser, loginUser, logoutUser, getMe };
