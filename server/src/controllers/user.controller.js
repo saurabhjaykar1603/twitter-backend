@@ -84,4 +84,46 @@ const followUnFollowUser = asyncHandler(async (req, res) => {
   }
 });
 
-export { getUserProfile, followUnFollowUser };
+const fetchSuggestedUsers = asyncHandler(async (req, res) => {
+  // Retrieve the ID of the current logged-in user
+  const loggedInUserId = req.user._id;
+
+  // Fetch the list of user IDs that the current user is already following
+  const { following } = await User.findById(loggedInUserId).select("following");
+
+  // Retrieve a random sample of 10 users, excluding the current logged-in user
+  const randomUsers = await User.aggregate([
+    {
+      $match: {
+        _id: { $ne: loggedInUserId },
+      },
+    },
+    {
+      $sample: { size: 10 },
+    },
+  ]);
+
+  // Filter out users already followed by the logged-in user, remove passwords, limit to 4 suggestions
+  const suggestedUsers = randomUsers
+    .filter((user) => !following.includes(user._id)) // Filter out users already followed
+    .slice(0, 4) // Limit the suggestions to 4 users
+    .map((user) => {
+      delete user.password; // Remove password field for security reasons
+      return user;
+    });
+
+  // const suggestedUsers = randomUsers
+  // .filter((user) => !following.includes(user._id)) // Filter out users already followed
+  // .slice(0, 4) // Limit the suggestions to 4 users
+  // .map((user) => {
+  //   const { password, email, __v, ...userDetails } = user; // Destructure to omit sensitive and unnecessary data
+  //   return userDetails;
+  // });
+
+  // Construct and send the response with the suggested users
+  return res
+    .status(200)
+    .json(new ApiResponse(200, suggestedUsers, "Suggested users for you"));
+});
+
+export { getUserProfile, followUnFollowUser, fetchSuggestedUsers };
