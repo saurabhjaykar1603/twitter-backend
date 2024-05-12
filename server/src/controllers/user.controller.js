@@ -1,3 +1,4 @@
+import Notification from "../models/notification.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -49,6 +50,7 @@ const followUnFollowUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(id, { $pull: { followers: req.user._id } });
     await User.findByIdAndUpdate(req.user._id, { $pull: { following: id } });
 
+    // todo return the id of the user as response
     // Return success response for unfollow
     return res
       .status(200)
@@ -63,6 +65,15 @@ const followUnFollowUser = asyncHandler(async (req, res) => {
     // If not following, follow the user by adding them to the 'following' and 'followers' arrays
     await User.findByIdAndUpdate(id, { $push: { followers: req.user._id } });
     await User.findByIdAndUpdate(req.user._id, { $push: { following: id } });
+    // Send a notification to the user that is being followed
+    const newNotification = new Notification({
+      type: "follow",
+      from: req.user._id,
+      to: userToModify._id,
+    });
+    await newNotification.save();
+
+    // todo return the id of the user as response
 
     // Return success response for follow
     return res
