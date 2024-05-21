@@ -3,6 +3,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import User from "./../models/user.model.js";
+import bcrypt from "bcryptjs";
+import { v2 as cloudinary } from "cloudinary";
 
 const getUserProfile = asyncHandler(async (req, res) => {
   const { username } = req.params;
@@ -126,4 +128,112 @@ const fetchSuggestedUsers = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, suggestedUsers, "Suggested users for you"));
 });
 
-export { getUserProfile, followUnFollowUser, fetchSuggestedUsers };
+const updateUserProfile = asyncHandler(async (req, res) => {
+  // Destructure the required fields from the request body
+  const {
+    fullName,
+    username,
+    currentPassword,
+    newPassword,
+    email,
+    bio,
+    links,
+    profilePicture,
+    coverPicture,
+  } = req.body;
+
+  // Check if the email already exists
+  if (email) {
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Email already exists"));
+    }
+  }
+
+  // Check if the username already exists
+  if (username) {
+    const usernameExists = await User.findOne({ username });
+    if (usernameExists) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Username already exists"));
+    }
+  }
+
+  // Get the currently logged-in user ID
+  const currentLoggedInUserId = req.user._id;
+  const user = await User.findById(currentLoggedInUserId);
+
+  // Check if the user exists
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // Check if both currentPassword and newPassword are provided
+  if ((currentPassword && !newPassword) || (!currentPassword && newPassword)) {
+    throw new ApiError(400, "Please provide both current and new password");
+  }
+
+  // If both passwords are provided, verify and update the password
+  if (newPassword && currentPassword) {
+    const isPasswordMatching = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+    if (!isPasswordMatching) {
+      throw new ApiError(400, "Current password is incorrect");
+    }
+    if (newPassword.length < 6) {
+      throw new ApiError(400, "Password must be at least 6 characters long");
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+  }
+
+  // Handle profile picture update
+  if (profilePicture) {
+    if (user.profilePicture) {
+      await cloudinary.uploader.destroy(
+        user.profilePicture.split("/").pop().split(".")[0]
+      );
+    }
+    const uploadedProfilePic = await cloudinary.uploader.upload(profilePicture);
+    user.profilePicture = uploadedProfilePic.secure_url;
+  }
+
+  // Handle cover picture update
+  if (coverPicture) {
+    if (user.coverPicture) {
+      await cloudinary.uploader.destroy(
+        user.coverPicture.split("/").pop().split(".")[0]
+      );
+    }
+    const uploadedCoverPic = await cloudinary.uploader.upload(coverPicture);
+    user.coverPicture = uploadedCoverPic.secure_url;
+  }
+
+  // Update user fields with provided data or retain existing values
+  user.fullName = fullName || user.fullName;
+  user.username = username || user.username;
+  user.email = email || user.email;
+  user.bio = bio || user.bio;
+  user.links = links || user.links;
+
+  // Save the updated user
+  const updatedUser = await user.save();
+  updatedUser.password = null; // Remove password from the response
+
+  // Return the updated user data
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedUser, "User updated successfully"));
+});
+
+export {
+  getUserProfile,
+  followUnFollowUser,
+  fetchSuggestedUsers,
+  updateUserProfile,
+};
