@@ -52,5 +52,30 @@ const createPost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, newPost, "Post created successfully"));
 });
 
-// Export the createPost controller function for use in routes
-export { createPost };
+// Controller function to delete a  post
+const deletePost = asyncHandler(async (req, res) => {
+  const { id } = req.params; // Extract post ID from request parameters
+
+  // Find the post by ID in the database
+  const post = await Post.findById(id);
+
+  // If the post is not found, throw a 404 error
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  // Check if the current logged-in user is the owner of the post
+  if (post.user.toString() !== req.user._id.toString()) {
+    throw new ApiError(401, null, "You are not authorized to delete the post");
+  }
+
+  // Delete the post from the database
+  await Post.findByIdAndDelete(id);
+
+  // Send a success response with no content
+  return res
+    .status(204)
+    .json(new ApiResponse(204, null, "Post deleted successfully"));
+});
+
+export { createPost, deletePost };
