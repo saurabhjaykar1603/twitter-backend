@@ -68,6 +68,10 @@ const deletePost = asyncHandler(async (req, res) => {
   if (post.user.toString() !== req.user._id.toString()) {
     throw new ApiError(401, null, "You are not authorized to delete the post");
   }
+  if (post.image) {
+    const imgageId = post.image.split("/").pop().split(".")[0];
+    await cloudinary.uploader.destroy(imgageId);
+  }
 
   // Delete the post from the database
   await Post.findByIdAndDelete(id);
