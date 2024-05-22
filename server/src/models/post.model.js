@@ -13,7 +13,7 @@ const postSchema = new Schema(
     image: {
       type: String,
     },
-    likes: [
+    comments: [
       {
         text: {
           type: String,
@@ -26,7 +26,7 @@ const postSchema = new Schema(
         },
       },
     ],
-    comments: [
+    like: [
       {
         type: Schema.Types.ObjectId,
         ref: "Comment",
