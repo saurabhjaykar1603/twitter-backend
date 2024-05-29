@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { v2 as cloudinary } from "cloudinary";
 import User from "../models/user.model.js";
 import mongoose from "mongoose";
+import Notification from "../models/notification.model.js";
 
 // Controller function to create a new post
 const createPost = asyncHandler(async (req, res) => {
@@ -128,4 +129,84 @@ const commentOnPost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, newComment, "Comment added successfully"));
 });
 
-export { createPost, deletePost, commentOnPost };
+const likeUnlikePost = asyncHandler(async (req, res) => {
+  // Extract the logged-in user's ID from the request object
+  const loggedInUserId = req.user._id;
+
+  // Extract the post ID from the request parameters
+  const { id: postId } = req.params;
+
+  // Check if the provided post ID is a valid MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(postId)) {
+    throw new ApiError(400, "Invalid post ID");
+  }
+
+  // Find the post by its ID
+  const post = await Post.findById(postId);
+  if (!post) {
+    // If the post is not found, throw a 404 error
+    throw new ApiError(404, "Post not found");
+  }
+
+  // Check if the user has already liked the post
+  const userLikePost = post.likes.includes(loggedInUserId);
+  if (userLikePost) {
+    // If the user has already liked the post, remove the like
+
+    // Remove the user's ID from the post's likes array
+    await Post.updateOne(
+      { _id: postId },
+      {
+        $pull: { likes: loggedInUserId },
+      }
+    );
+
+    // Remove the post ID from the user's likedPosts array
+    await User.updateOne(
+      { _id: loggedInUserId },
+      {
+        $pull: { likedPosts: postId },
+      }
+    );
+
+    // Filter out the user's ID from the post's likes array
+    const updatedLike = post.likes.filter(
+      (id) => id.toString() !== loggedInUserId.toString()
+    );
+
+    // Respond with a success message and the updated likes array
+    res.status(200).json(new ApiResponse(200, updatedLike, "Post unliked successfully"));
+  } else {
+    // If the user has not liked the post, add a like
+
+    // Add the user's ID to the post's likes array
+    post.likes.push(loggedInUserId);
+
+    // Add the post ID to the user's likedPosts array
+    await User.updateOne(
+      { _id: loggedInUserId },
+      {
+        $push: { likedPosts: postId },
+      }
+    );
+
+    // Save the updated post
+    await post.save();
+
+    // Create a notification for the like action
+    const likeNotification = new Notification({
+      from: loggedInUserId,
+      to: post.user,
+      type: "like",
+    });
+
+    // Save the notification
+    await likeNotification.save();
+
+    // Respond with a success message and the notification
+    res.status(201).json(new ApiResponse(201, likeNotification, "Post liked successfully"));
+  }
+});
+
+
+export { createPost, deletePost, commentOnPost, likeUnlikePost };
