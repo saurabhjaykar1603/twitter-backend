@@ -229,4 +229,33 @@ const getAllPosts = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, post, "All Posts"));
 });
 
-export { createPost, deletePost, commentOnPost, likeUnlikePost, getAllPosts };
+const getUserLikesPost = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid post ID");
+  }
+  const user = await User.findById(id);
+  if (!user) {
+    throw new ApiError(404, "user not found");
+  }
+  console.log(user);
+  const userLikes = await Post.find({
+    _id: { $in: user.likedPosts },
+  }).populate({
+    path: "user",
+    select: "-password",
+  }).populate({
+    path: "comments.user",
+    select: "-password",
+  });
+  res.status(200).json(new ApiResponse(200, userLikes, "User likes posts"));
+});
+
+export {
+  createPost,
+  deletePost,
+  commentOnPost,
+  likeUnlikePost,
+  getAllPosts,
+  getUserLikesPost,
+};
