@@ -175,7 +175,9 @@ const likeUnlikePost = asyncHandler(async (req, res) => {
     );
 
     // Respond with a success message and the updated likes array
-    res.status(200).json(new ApiResponse(200, updatedLike, "Post unliked successfully"));
+    res
+      .status(200)
+      .json(new ApiResponse(200, updatedLike, "Post unliked successfully"));
   } else {
     // If the user has not liked the post, add a like
 
@@ -204,9 +206,27 @@ const likeUnlikePost = asyncHandler(async (req, res) => {
     await likeNotification.save();
 
     // Respond with a success message and the notification
-    res.status(201).json(new ApiResponse(201, likeNotification, "Post liked successfully"));
+    res
+      .status(201)
+      .json(new ApiResponse(201, likeNotification, "Post liked successfully"));
   }
 });
 
+const getAllPosts = asyncHandler(async (req, res) => {
+  const post = await Post.find()
+    .sort({ createdAt: -1 })
+    .populate({
+      path: "user",
+      select: "-password",
+    })
+    .populate({
+      path: "comments.user",
+      select: "-password",
+    });
+  if (post.length === 0) {
+    return res.status(404).json(new ApiResponse(404, [], "No posts found"));
+  }
+  res.status(200).json(new ApiResponse(200, post, "All Posts"));
+});
 
-export { createPost, deletePost, commentOnPost, likeUnlikePost };
+export { createPost, deletePost, commentOnPost, likeUnlikePost, getAllPosts };

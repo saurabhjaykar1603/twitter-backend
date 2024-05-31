@@ -5,6 +5,7 @@ import {
   createPost,
   deletePost,
   likeUnlikePost,
+  getAllPosts
 } from "../controllers/post.controller.js";
 import { validateDeletePost } from "../middlewares/validateDeletePost.js";
 import { deletePostRateLimiter } from "../middlewares/deletePostRateLimiter.js";
@@ -21,5 +22,6 @@ router.delete(
 );
 router.post("/comment/:id", authMiddleware, commentOnPost);
 router.post("/like/:id", authMiddleware, likeUnlikePost);
+router.get("/all", authMiddleware, getAllPosts)
 
 export default router;
