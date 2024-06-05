@@ -277,6 +277,31 @@ const getFollowingPosts = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, followingFeedPost, "Following posts"));
 });
 
+const getUserPosts = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  // Find the user by username
+  const user = await User.findOne({ username });
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // Find the posts associated with the user
+  const userPosts = await Post.find({ user: user._id })
+    .sort({ createdAt: -1 })
+    .populate({
+      path: "user",
+      select: "-password",
+    })
+    .populate({
+      path: "comments.user",
+      select: "-password",
+    });
+
+  // Respond with the posts
+  res.status(200).json(new ApiResponse(200, userPosts, "User posts"));
+});
+
 export {
   createPost,
   deletePost,
@@ -285,4 +310,5 @@ export {
   getAllPosts,
   getUserLikesPost,
   getFollowingPosts,
+  getUserPosts,
 };
