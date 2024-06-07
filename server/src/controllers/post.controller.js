@@ -294,7 +294,7 @@ const getUserPosts = asyncHandler(async (req, res) => {
       select: "-password",
     })
     .populate({
-      path: "comments.user",
+      path: "comments.user", 
       select: "-password",
     });
 
