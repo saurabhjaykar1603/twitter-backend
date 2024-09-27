@@ -37,7 +37,8 @@ This project is a backend implementation for a Twitter-like application. It prov
 1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/twitter-backend.git
-   cd twitter-backend
+   cd twitter-backend/server
+   
    ```
 
 2. Install dependencies:
@@ -154,5 +155,3 @@ This project is a backend implementation for a Twitter-like application. It prov
 This project is licensed under the MIT License.
 
 ---
-
-Feel free to modify this README according to your specific needs or additional features you might add!
